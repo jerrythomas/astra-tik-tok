@@ -1,28 +1,35 @@
-import React from 'react'
-import MicroCard from '../components/MicroCard'
+const fs = import('fs')
+const { createClient } = require("@astrajs/collections")
 
-const FollowersColumn = (topFiveFollowing) => {
-  const users = topFiveFollowing.users
+const collection = 'posts'
 
-  return (
-    <div className="followers-column">
-      <div className="followers-section">
-        <div className="home" />
-        <h2 className="bold red">For You</h2>
-      </div>
-      <div className="followers-section">
-        <div className="following" />
-        <h2>Following</h2>
-      </div>
-      <hr />
-      <p>Your top accounts</p>
-      {users && users.map((user, index) => (
-        <MicroCard 
-            key={index} user={user}
-        />))}
-      <hr />
-    </div>
-  )
-}
+exports.handler = async function (event, context, callback) {
+    const fs = require('fs')
+      const astraClient = await createClient({
+       astraDatabaseId: process.env.ASTRA_DB_ID,
+       astraDatabaseRegion: process.env.ASTRA_DB_REGION,
+       applicationToken: process.env.ASTRA_DB_APPLICATION_TOKEN,
+     });
 
-export default FollowersColumn
+  const posts = astraClient
+    .namespace(process.env.ASTRA_DB_KEYSPACE)
+    .collection(collection)
+
+  const data = JSON.parse(fs.readFileSync('/root/data.json'))
+    
+  try {
+        for (let i = 0; i < data.length; i++) {
+          await posts.create(data[i].id.toString(), data[i])
+        }
+
+        return {
+            statusCode: 200,
+        }
+    } catch (e) {
+        console.error(e);
+        return {
+            statusCode: 500,
+            body: JSON.stringify(e),
+        }
+    }
+}   
